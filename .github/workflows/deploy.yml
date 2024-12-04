@@ -32,13 +32,13 @@ jobs:
         run: "deno install"
 
       - name: Build step
-        run: "deno task build"
+        run: "deno build task"
 
       - name: Upload to Deno Deploy
         uses: denoland/deployctl@v1
         with:
-          project: "carrot516-library-69"
-          entrypoint: "server/main.ts"
+          project: "carrot516-library-37"
+          entrypoint: "./server/main.tsx"
           root: ""
           
           
