@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Dino } from "../types.ts";
+import { Dino } from "../../types.ts";
 
 export default function Index() {
     const [dinosaurs, setDinosaurs] = useState<Dino[]>([]);

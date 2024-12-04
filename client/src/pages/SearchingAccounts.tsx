@@ -4,8 +4,8 @@ import React from 'react';
 export default function SearchingAccounts() {
     return (
         <div>
-            <h1>Logowanie</h1>
-            <p>Formularz logowania będzie tutaj.</p>
+            <h1>Szukanie kont</h1>
+            <p>Tu bedzie wyszukiwanie kont i wyswietlanie ich</p>
         </div>
     );
 };

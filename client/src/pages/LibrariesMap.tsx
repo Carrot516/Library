@@ -4,8 +4,8 @@ import React from 'react';
 export default function LibrariesMap() {
     return (
         <div>
-            <h1>Logowanie</h1>
-            <p>Formularz logowania będzie tutaj.</p>
+            <h1>Mapa bibliotek</h1>
+            <p>Tu bedzie mapa</p>
         </div>
     );
 };

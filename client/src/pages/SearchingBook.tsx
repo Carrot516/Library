@@ -4,8 +4,8 @@ import React from 'react';
 export default function SearchingBook() {
     return (
         <div>
-            <h1>Logowanie</h1>
-            <p>Formularz logowania będzie tutaj.</p>
+            <h1>Szukanie ksiazek</h1>
+            <p>Tutaj wyszukasz ksiazki i je zarezerwujesz/wyporzyczysz</p>
         </div>
     );
 };

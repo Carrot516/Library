@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Dino } from "../types";
+import { Dino } from "../../types";
 
 export default function Dinosaur() {
     const { selectedDinosaur } = useParams();
