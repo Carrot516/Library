@@ -67,7 +67,13 @@
   display: flex;
 }
 
-.sidebar {
-  background-color: aquamarine;
+.app-container {
+  display: flex;
+}
+
+.main-content {
+  margin-left: 200px; /* Szerokość sidebaru */
   padding: 20px;
+  flex: 1;
+  box-sizing: border-box;
 }

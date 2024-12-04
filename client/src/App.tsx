@@ -1,28 +1,47 @@
+// client/src/App.tsx
 import React from 'react';
 import { BrowserRouter, Route, Routes } from "react-router-dom";
-import Index from "./pages/index.tsx";
-import Dinosaur from "./pages/Dinosaur.tsx";
 import MainPage from "./pages/MainPage.tsx";
 import LoginPage from "./pages/LoginPage.tsx";
-import LibrariesMap from "./pages/LibrariesMap";
-import MyAccount from "./pages/MyAccount";
-import SearchingAccounts from "./pages/SearchingAccounts";
-import SearchingBook from "./pages/SearchingBook";
+import LibrariesMap from "./pages/LibrariesMap.tsx";
+import MyAccount from "./pages/MyAccount.tsx";
+import SearchingAccounts from "./pages/SearchingAccounts.tsx";
+import SearchingBook from "./pages/SearchingBook.tsx";
+import Sidebar from "./components/Sidebar.tsx"; // Import Sidebar
 import "./App.css";
 
 function App() {
     return (
         <BrowserRouter>
-            <Routes>
-                <Route path="/" element={<MainPage />} />
-                <Route path="/Login" element={<LoginPage />} />
-                <Route path="/LibrariesMap" element={<LibrariesMap />} />
-                <Route path="/SearchingAccounts" element={<SearchingAccounts />} />
-                <Route path="/MyAccount" element={<MyAccount />} />
-                <Route path="/SearchingBook" element={<SearchingBook />} />
-            </Routes>
+            <div className="app-container">
+                <Sidebar />
+                <div className="main-content">
+                    <Routes>
+                        <Route path="/" element={<MainPage />} />
+                        <Route path="/Login" element={<LoginPage />} />
+                        <Route path="/LibrariesMap" element={<LibrariesMap />} />
+                        <Route path="/SearchingAccounts" element={<SearchingAccounts />} />
+                        <Route path="/MyAccount" element={<MyAccount />} />
+                        <Route path="/SearchingBook" element={<SearchingBook />} />
+                    </Routes>
+                </div>
+            </div>
         </BrowserRouter>
     );
 }
 
 export default App;
+
+
+//
+// import React from 'react';
+// import MainPage from "./pages/MainPage.tsx";
+// import "./App.css";
+//
+// function App() {
+//     return (
+//         <MainPage />
+//     );
+// }
+//
+// export default App;
