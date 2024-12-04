@@ -37,8 +37,8 @@ jobs:
       - name: Upload to Deno Deploy
         uses: denoland/deployctl@v1
         with:
-          project: "carrot516-library-93"
-          entrypoint: "./server/main.ts"
+          project: "carrot516-library-69"
+          entrypoint: "server/main.ts"
           root: ""
           
           
