@@ -1,65 +1,3 @@
-// // main.ts
-// import { Application } from "jsr:@oak/oak/application";
-// import { Router } from "jsr:@oak/oak/router";
-// import { oakCors } from "@tajpouria/cors";
-// import routeStaticFilesFrom from "./util/routeStaticFilesFrom.ts";
-// import { Client } from "https://deno.land/x/postgres@v0.17.0/mod.ts";
-//
-// // Import z pliku db.ts, gdzie tworzysz i eksportujesz connectDB()
-// import { connectDB } from "./database/db.ts";
-//
-// // Tworzymy instancję aplikacji Oak
-// export const app = new Application();
-// const router = new Router();
-//
-// const pass = Deno.env.get("DB_PASS");
-// const pool = new Client({
-//   user: "postgres",
-//   database: "postgres",
-//   hostname: "grumpily-legitimate-shearwater.data-1.use1.tembo.io",
-//   port: 5432,
-//   password: "VpTdDi3NTGobmeqA",
-//   tls: {
-//     caCertificates: [
-//       await Deno.readTextFile(
-//           new URL("./ca.crt", import.meta.url),
-//       ),
-//     ],
-//     enabled: true,
-//   },
-// }, 5, true);
-// const connection = await pool.connect();
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-// // Middleware: CORS, routery, statyczne pliki
-// app.use(oakCors());
-// app.use(router.routes());
-// app.use(router.allowedMethods());
-// app.use(
-//     routeStaticFilesFrom([
-//       `${Deno.cwd()}/client/dist`,
-//       `${Deno.cwd()}/client/public`,
-//     ]),
-// );
-//
-// // Uruchamiamy serwer *tylko* jeśli ten plik jest wykonywany jako główny
-// if (import.meta.main) {
-//   console.log("Server listening on port http://localhost:8000");
-//   await app.listen({ port: 8000 });
-// }
-
-
-// server/main.ts
 import { Application, Router } from "https://deno.land/x/oak@v12.5.0/mod.ts";
 import { oakCors } from "https://deno.land/x/cors@v1.2.2/mod.ts";
 import routeStaticFilesFrom from "./util/routeStaticFilesFrom.ts";
@@ -95,6 +33,8 @@ router.get("/api/books", async (context) => {
   const genre = url.searchParams.get("genre");
   const releaseYear = url.searchParams.get("release_year");
 
+  console.log("Received filters:", { bookName, authorName, genre, releaseYear });
+
   let query = `
         SELECT
           erd_biblioteka_projekt.book_info.bookid,
@@ -110,8 +50,7 @@ router.get("/api/books", async (context) => {
         LEFT JOIN
           erd_biblioteka_projekt.book_genres ON erd_biblioteka_projekt.book_info.bookid = erd_biblioteka_projekt.book_genres.bookid
     `;
-  console.log("Otrzymano żądanie do /api/books");
-
+  console.log("Initial Query:", query);
 
   const conditions: string[] = [];
   const params: (string | number)[] = [];
@@ -152,10 +91,13 @@ router.get("/api/books", async (context) => {
     query += ` WHERE ` + conditions.join(" AND ");
   }
 
-  query += ` GROUP BY book_info.bookid, author_info.author_id`;
+  query += ` GROUP BY erd_biblioteka_projekt.book_info.bookid, erd_biblioteka_projekt.author_info.author_id`;
+  console.log("Final Query:", query);
+  console.log("Query Parameters:", params);
 
   try {
     const result = await client.queryObject(query, ...params);
+    console.log("Query Result:", result.rows);
     context.response.status = 200;
     context.response.body = result.rows;
   } catch (error) {

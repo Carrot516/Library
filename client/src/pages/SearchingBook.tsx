@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import SearchForm from '../components/SearchForm'; // Poprawiona ścieżka importu
 import './SearchingBook.css'; // Import pliku CSS
 
 interface Book {
@@ -10,14 +11,14 @@ interface Book {
     genres: string[];
 }
 
-export default function SearchingBook() {
-    const [filters, setFilters] = useState({
-        book_name: '',
-        author: '',
-        genre: '',
-        release_year: '',
-    });
+interface Filters {
+    book_name: string;
+    author: string;
+    genre: string;
+    release_year: string;
+}
 
+const SearchingBook: React.FC = () => {
     const [books, setBooks] = useState<Book[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -26,91 +27,84 @@ export default function SearchingBook() {
 
     const limit = 10; // Liczba wyników na stronę
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        setFilters({
-            ...filters,
-            [e.target.name]: e.target.value,
-        });
-    };
-
-    const handleSearch = async (e: React.FormEvent) => {
-        e.preventDefault();
+    // Funkcja obsługująca wyszukiwanie
+    const handleSearch = async (newFilters: Filters) => {
         setLoading(true);
         setError(null);
         setBooks([]);
         setPage(1);
 
-        fetchBooks(1);
+        fetchBooks(newFilters, 1);
     };
 
-    const fetchBooks = async (pageNumber: number) => {
+    // Funkcja pobierająca książki z API
+    const fetchBooks = async (currentFilters: Filters, pageNumber: number) => {
         // Budowanie query string
         const queryParams = new URLSearchParams({
-            ...filters,
+            ...currentFilters,
             page: pageNumber.toString(),
             limit: limit.toString(),
         });
 
+        console.log("Sending request with filters:", queryParams.toString());
+
         try {
-            const response = await fetch(`/api/books?${queryParams.toString()}`);
+            const response = await fetch(`/api/books?${queryParams.toString()}`); // Użyj względnego URL, jeśli masz proxy
             if (!response.ok) {
                 throw new Error(`Error: ${response.statusText}`);
             }
-            const data: Book[] = await response.json();
-            setBooks(data);
-            // Zakładamy, że backend zwraca tylko część danych i nie mamy informacji o całkowitej liczbie wyników.
-            // Można to rozszerzyć, modyfikując backend, aby zwracał dodatkowe informacje.
-            setTotalPages(5); // Przykładowa wartość, należy dynamicznie obliczać na podstawie danych
+            const data = await response.json();
+            console.log("Received data from API:", data); // Dodany log
+            setBooks(data.books);
+            setTotalPages(data.totalPages);
         } catch (err: any) {
+            console.error("Error fetching books:", err);
             setError(err.message || "Something went wrong");
+            setBooks([]);
         } finally {
             setLoading(false);
         }
     };
 
+    // Funkcja obsługująca zmianę strony w paginacji
     const handlePageChange = (newPage: number) => {
         setPage(newPage);
-        fetchBooks(newPage);
+        fetchBooks({ book_name: "", author: "", genre: "", release_year: "" }, newPage); // Upewnij się, że przekazujesz aktualne filtry
     };
 
     return (
-        <div>
+        <div className="searching-book-container">
             <h1>Szukanie Książek</h1>
-            <p>Tutaj wyszukasz książki i je zarezerwujesz/wypożyczysz</p>
-            <form onSubmit={handleSearch}>
-                <div>
-                    <label htmlFor="book_name">Nazwa Książki:</label>
-                    <input
-                        type="text"
-                        id="book_name"
-                        name="book_name"
-                        value={filters.book_name}
-                        onChange={handleChange}
-                        placeholder="Wpisz nazwę książki"
-                    />
-                </div>
-                {/* Inne pola */}
-                <button type="submit" disabled={loading}>
-                    {loading ? 'Wyszukiwanie...' : 'Szukaj'}
-                </button>
-            </form>
+            <p>Tutaj wyszukasz książki i je zarezerwujesz/wypożyczysz.</p>
 
-            {error && <p style={{color: 'red'}}>{error}</p>}
+            {/* Integracja komponentu SearchForm */}
+            <SearchForm onSearch={handleSearch} />
 
-            <div>
-                <h2>Wyniki:</h2>
-                {books.length === 0 && !loading && <p>Brak wyników.</p>}
-                {books.map((book) => (
-                    <div key={book.bookid} className="book-card">
-                        <h3>{book.book_name}</h3>
-                        <p><strong>Autor:</strong> {book.author_name}</p>
-                        <p><strong>Rok Wydania:</strong> {book.book_release_year}</p>
-                        <p><strong>Język Oryginalny:</strong> {book.book_orig_lang}</p>
-                        <p><strong>Gatunki:</strong> {book.genres.join(', ')}</p>
-                    </div>
-                ))}
+            {/* Wyświetlanie komunikatów */}
+            {loading && <p>Ładowanie...</p>}
+            {error && <p className="error">{error}</p>}
 
-                {/* Paginacja */}
+            {/* Wyświetlanie wyników wyszukiwania */}
+            <div className="results">
+                {books.length > 0 ? (
+                    <ul>
+                        {books.map((book) => (
+                            <li key={book.bookid} className="book-item">
+                                <h3>{book.book_name}</h3>
+                                <p><strong>Autor:</strong> {book.author_name}</p>
+                                <p><strong>Rok Wydania:</strong> {book.book_release_year}</p>
+                                <p><strong>Język Oryginalny:</strong> {book.book_orig_lang}</p>
+                                <p><strong>Gatunki:</strong> {book.genres.join(', ')}</p>
+                            </li>
+                        ))}
+                    </ul>
+                ) : (
+                    !loading && <p>Brak wyników.</p>
+                )}
+            </div>
+
+            {/* Paginacja */}
+            {books.length > 0 && (
                 <div className="pagination">
                     <button
                         onClick={() => handlePageChange(page - 1)}
@@ -126,8 +120,9 @@ export default function SearchingBook() {
                         Następna
                     </button>
                 </div>
-            </div>
-
+            )}
         </div>
     );
 };
+
+export default SearchingBook;
