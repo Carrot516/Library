@@ -1,6 +1,8 @@
+// client/src/pages/SearchingBook.tsx
+
 import React, { useState } from 'react';
-import SearchForm from '../components/SearchForm'; // Poprawiona ścieżka importu
-import './SearchingBook.css'; // Import pliku CSS
+import SearchForm from '../components/SearchForm';
+import './SearchingBook.css';
 
 interface Book {
     bookid: number;
@@ -19,9 +21,22 @@ interface Filters {
 }
 
 const SearchingBook: React.FC = () => {
+    // Stan przechowujący aktualne filtry wyszukiwania
+    const [filters, setFilters] = useState<Filters>({
+        book_name: '',
+        author: '',
+        genre: '',
+        release_year: '',
+    });
+
+    // Stan przechowujący wyniki wyszukiwania
     const [books, setBooks] = useState<Book[]>([]);
+
+    // Stan obsługujący ładowanie i błędy
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // Stan obsługujący paginację
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
 
@@ -33,15 +48,18 @@ const SearchingBook: React.FC = () => {
         setError(null);
         setBooks([]);
         setPage(1);
+        setFilters(newFilters);
 
-        fetchBooks(newFilters, 1);
+        await fetchBooks(newFilters, 1);
     };
 
     // Funkcja pobierająca książki z API
     const fetchBooks = async (currentFilters: Filters, pageNumber: number) => {
-        // Budowanie query string
         const queryParams = new URLSearchParams({
-            ...currentFilters,
+            book_name: currentFilters.book_name,
+            author: currentFilters.author,
+            genre: currentFilters.genre,
+            release_year: currentFilters.release_year,
             page: pageNumber.toString(),
             limit: limit.toString(),
         });
@@ -49,18 +67,37 @@ const SearchingBook: React.FC = () => {
         console.log("Sending request with filters:", queryParams.toString());
 
         try {
-            const response = await fetch(`/api/books?${queryParams.toString()}`); // Użyj względnego URL, jeśli masz proxy
+            const response = await fetch(`/api/books?${queryParams.toString()}`);
             if (!response.ok) {
                 throw new Error(`Error: ${response.statusText}`);
             }
             const data = await response.json();
             console.log("Received data from API:", data); // Dodany log
-            setBooks(data.books);
-            setTotalPages(data.totalPages);
+
+            // Sprawdzenie, czy data jest tablicą
+            if (Array.isArray(data)) {
+                // Przekształcenie tablic tablic do tablicy obiektów Book
+                const transformedBooks: Book[] = data.map((item: any[]) => ({
+                    bookid: item[0],
+                    book_name: item[1],
+                    book_release_year: item[2],
+                    book_orig_lang: item[3],
+                    author_name: item[4],
+                    genres: item[5],
+                }));
+                setBooks(transformedBooks); // Aktualizacja stanu `books` z przekształconymi danymi
+                setTotalPages(1); // Ponieważ backend nie zwraca `totalPages`, ustawiamy domyślną wartość
+            } else {
+                console.error("Nieprawidłowa struktura danych:", data);
+                setBooks([]);
+                setTotalPages(1);
+            }
+
         } catch (err: any) {
             console.error("Error fetching books:", err);
             setError(err.message || "Something went wrong");
             setBooks([]);
+            setTotalPages(1);
         } finally {
             setLoading(false);
         }
@@ -68,8 +105,9 @@ const SearchingBook: React.FC = () => {
 
     // Funkcja obsługująca zmianę strony w paginacji
     const handlePageChange = (newPage: number) => {
+        if (newPage < 1 || newPage > totalPages) return;
         setPage(newPage);
-        fetchBooks({ book_name: "", author: "", genre: "", release_year: "" }, newPage); // Upewnij się, że przekazujesz aktualne filtry
+        fetchBooks(filters, newPage);
     };
 
     return (

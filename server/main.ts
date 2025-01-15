@@ -1,15 +1,11 @@
 import { Application, Router } from "https://deno.land/x/oak@v12.5.0/mod.ts";
 import { oakCors } from "https://deno.land/x/cors@v1.2.2/mod.ts";
 import routeStaticFilesFrom from "./util/routeStaticFilesFrom.ts";
-// Usuń ten import, jeśli nie jest potrzebny
-import data from "./api/data.json" with { type: "json" };
 import { connectDB, client } from "./database/db.ts";
 
-// Tworzenie instancji aplikacji Oak
 const app = new Application();
 const router = new Router();
 
-// Middleware: Globalna obsługa błędów
 app.use(async (ctx, next) => {
   try {
     await next();
@@ -20,10 +16,8 @@ app.use(async (ctx, next) => {
   }
 });
 
-// Middleware: CORS
 app.use(oakCors());
 
-// Endpoint: Wyszukiwanie książek z filtrami
 router.get("/api/books", async (context) => {
 
   const url = new URL(context.request.url);
@@ -33,7 +27,7 @@ router.get("/api/books", async (context) => {
   const genre = url.searchParams.get("genre");
   const releaseYear = url.searchParams.get("release_year");
 
-  console.log("Received filters:", { bookName, authorName, genre, releaseYear });
+  // console.log("Received filters:", { bookName, authorName, genre, releaseYear });
 
   let query = `
         SELECT
@@ -50,26 +44,26 @@ router.get("/api/books", async (context) => {
         LEFT JOIN
           erd_biblioteka_projekt.book_genres ON erd_biblioteka_projekt.book_info.bookid = erd_biblioteka_projekt.book_genres.bookid
     `;
-  console.log("Initial Query:", query);
+  // console.log("Initial Query:", query);
 
   const conditions: string[] = [];
   const params: (string | number)[] = [];
   let paramIndex = 1;
 
   if (bookName) {
-    conditions.push(`erd_biblioteka_projekt.book_info.book_name ILIKE $${paramIndex}`);
+    conditions.push(`erd_biblioteka_projekt.book_info.book_name ILIKE $NAME`);
     params.push(`%${bookName}%`);
     paramIndex++;
   }
 
   if (authorName) {
-    conditions.push(`erd_biblioteka_projekt.author_info.author_name ILIKE $${paramIndex}`);
+    conditions.push(`erd_biblioteka_projekt.author_info.author_name ILIKE $AUTHOR`);
     params.push(`%${authorName}%`);
     paramIndex++;
   }
 
   if (genre) {
-    conditions.push(`erd_biblioteka_projekt.book_genres.genre ILIKE $${paramIndex}`);
+    conditions.push(`erd_biblioteka_projekt.book_genres.genre ILIKE $GENRE`);
     params.push(`%${genre}%`);
     paramIndex++;
   }
@@ -77,7 +71,7 @@ router.get("/api/books", async (context) => {
   if (releaseYear) {
     const year = parseInt(releaseYear);
     if (!isNaN(year)) {
-      conditions.push(`book_info.book_release_year = $${paramIndex}`);
+      conditions.push(`book_info.book_release_year = $YEAR`);
       params.push(year);
       paramIndex++;
     } else {
@@ -92,12 +86,13 @@ router.get("/api/books", async (context) => {
   }
 
   query += ` GROUP BY erd_biblioteka_projekt.book_info.bookid, erd_biblioteka_projekt.author_info.author_id`;
-  console.log("Final Query:", query);
-  console.log("Query Parameters:", params);
+  // console.log("Final Query:", query);
+  // console.log("Query Parameters:", params);
 
   try {
-    const result = await client.queryObject(query, ...params);
-    console.log("Query Result:", result.rows);
+    console.log(query);
+    const result = await client.queryArray(query,{name:`%${bookName}%`,author:`%${authorName}%`,genre:`%${genre}%`,year:`%${releaseYear}%`});
+    console.log("Query Result:", result);
     context.response.status = 200;
     context.response.body = result.rows;
   } catch (error) {
@@ -107,16 +102,11 @@ router.get("/api/books", async (context) => {
   }
 });
 
-// (Opcjonalnie) Usuń lub zaktualizuj stare trasy związane z dinozaurami
-router.get("/api/dinosaurs", (context) => {
-  context.response.body = "Endpoint do dinozaurów - do usunięcia lub zaktualizowania.";
-});
 
-// Middleware: Router
+
 app.use(router.routes());
 app.use(router.allowedMethods());
 
-// Middleware: Serwowanie plików statycznych
 app.use(
     routeStaticFilesFrom([
       `${Deno.cwd()}/client/dist`,
@@ -124,12 +114,9 @@ app.use(
     ]),
 );
 
-// Uruchamiamy serwer *tylko* jeśli ten plik jest wykonywany jako główny
 if (import.meta.main) {
-  // Nawiązywanie połączenia z bazą danych
   await connectDB();
 
-  // Start serwera Oak
   console.log("Server listening on port http://localhost:8000");
   await app.listen({ port: 8000 });
 }
