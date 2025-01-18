@@ -68,18 +68,25 @@ router.get("/api/books", async (context) => {
     paramIndex++;
   }
 
+  // if (releaseYear) {
+  //   const year = parseInt(releaseYear);
+  //   if (!isNaN(year)) {
+  //     conditions.push(`book_info.book_release_year = $YEAR`);
+  //     params.push(`%${releaseYear}%`);
+  //     paramIndex++;
+  //   } else {
+  //     context.response.status = 400;
+  //     context.response.body = { error: "Invalid release year." };
+  //     return;
+  //   }
+  // }
   if (releaseYear) {
-    const year = parseInt(releaseYear);
-    if (!isNaN(year)) {
-      conditions.push(`book_info.book_release_year = $YEAR`);
-      params.push(year);
-      paramIndex++;
-    } else {
-      context.response.status = 400;
-      context.response.body = { error: "Invalid release year." };
-      return;
-    }
+    // Niepotrzebne parseInt, skoro traktujemy rok jak tekst
+    conditions.push(`erd_biblioteka_projekt.book_info.book_release_year::text ILIKE $YEAR`);
+    params.push(`%${releaseYear}%`);
+    paramIndex++;
   }
+
 
   if (conditions.length > 0) {
     query += ` WHERE ` + conditions.join(" AND ");

@@ -4,8 +4,8 @@ import React from 'react';
 export default function LibrariesMap() {
     return (
         <div>
-            <h1>Mapa bibliotek</h1>
-            <p>Tu bedzie mapa</p>
+            <h1>Dodawanie książek</h1>
+            <p>Tu można dodać książki</p>
         </div>
     );
 };
