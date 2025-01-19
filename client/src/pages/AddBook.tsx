@@ -1,7 +1,6 @@
 // client/src/pages/AddBook.tsx
 
 import React, { useState } from 'react';
-import './AddBook.css';
 
 interface AddBookData {
     book_name: string;

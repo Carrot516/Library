@@ -12,7 +12,7 @@ app.use(async (ctx, next) => {
   } catch (err) {
     console.error("Globalny błąd:", err);
     ctx.response.status = err.status || 500;
-    ctx.response.body = { error: err.message || "Internal Server Error" };
+    ctx.response.body = { error: err.message || "Internal Server Error1" };
   }
 });
 
@@ -32,8 +32,7 @@ router.post("/api/books", async (context) => {
   try {
     // Sprawdź, czy autor już istnieje
     const authorResult = await client.queryArray(
-        `SELECT author_id FROM erd_biblioteka_projekt.author_info WHERE author_name = $1`,
-        author_name
+        `SELECT author_id FROM erd_biblioteka_projekt.author_info WHERE author_name = '${author_name}'`
     );
 
     let author_id: number;
@@ -42,31 +41,40 @@ router.post("/api/books", async (context) => {
       author_id = authorResult.rows[0][0];
     } else {
       // Dodaj nowego autora
+      const maxIdAuthor = await client.queryArray(
+          `SELECT COALESCE(MAX(author_id), 0) + 1 AS next_id FROM erd_biblioteka_projekt.author_info`
+      );
+      const next_author_id = maxIdAuthor.rows[0][0] as number;
       const insertAuthor = await client.queryArray(
-          `INSERT INTO erd_biblioteka_projekt.author_info (author_name) VALUES ($1) RETURNING author_id`,
-          author_name
+
+          `INSERT INTO erd_biblioteka_projekt.author_info (author_name, author_id) VALUES ('${author_name}','${next_author_id}') RETURNING author_id`
       );
       author_id = insertAuthor.rows[0][0];
     }
 
     // Dodaj nową książkę
+    const maxIdBook = await client.queryArray(
+        `SELECT COALESCE(MAX(bookid), 0) + 1 AS next_id FROM erd_biblioteka_projekt.book_info`
+    );
+    const next_book_id = maxIdBook.rows[0][0] as number;
     const insertBook = await client.queryArray(
-        `INSERT INTO erd_biblioteka_projekt.book_info (book_name, book_release_year, book_orig_lang, book_author_id) VALUES ($1, $2, $3, $4) RETURNING bookid`,
-        book_name,
-        book_release_year,
-        book_orig_lang,
-        author_id
+        `INSERT INTO erd_biblioteka_projekt.book_info (book_name, book_release_year, book_orig_lang, book_author_id, bookid) VALUES ('${book_name}', '${book_release_year}', '${book_orig_lang}', '${author_id}','${next_book_id}') RETURNING bookid`
     );
 
     const bookid = insertBook.rows[0][0];
 
     // Dodaj gatunki
+
+    const maxIdGenre = await client.queryArray(
+        `SELECT COALESCE(MAX(genreid), 0) + 1 AS next_id FROM erd_biblioteka_projekt.book_genres`
+    );
     for (let genre of genres) {
+      var i=1;
+      const next_genre_id = (maxIdBook.rows[0][0] as number)+i;
       await client.queryArray(
-          `INSERT INTO erd_biblioteka_projekt.book_genres (genre, bookid) VALUES ($1, $2)`,
-          genre,
-          bookid
+          `INSERT INTO erd_biblioteka_projekt.book_genres (genre, bookid, genreid) VALUES ('${genre}', '${bookid}','${next_genre_id}') RETURNING bookid`
       );
+      i++;
     }
 
     context.response.status = 201;
@@ -74,18 +82,19 @@ router.post("/api/books", async (context) => {
   } catch (error) {
     console.error("Error adding book:", error);
     context.response.status = 500;
-    context.response.body = { error: "Internal Server Error" };
+    context.response.body = { error: "Internal Server Error2" };
   }
 });
-
-
-// main.ts (dodaj poniższy kod przed `app.use(router.routes())`)
 
 router.post("/api/assign", async (context) => {
   const body = await context.request.body();
   const data = await body.value;
 
+  console.log("Received assign data:", data);
+
   const { book_id, library_id, status } = data;
+
+  console.log("Parsed assign data:", { book_id, library_id, status });
 
   if (!book_id || !library_id || !status) {
     context.response.status = 400;
@@ -96,9 +105,10 @@ router.post("/api/assign", async (context) => {
   try {
     // Sprawdź, czy książka istnieje
     const bookResult = await client.queryArray(
-        `SELECT bookid FROM erd_biblioteka_projekt.book_info WHERE bookid = $1`,
-        book_id
+        `SELECT bookid FROM erd_biblioteka_projekt.book_info WHERE bookid = ${book_id}`
     );
+
+    console.log("Book Result:", bookResult.rows);
 
     if (bookResult.rows.length === 0) {
       context.response.status = 404;
@@ -108,9 +118,10 @@ router.post("/api/assign", async (context) => {
 
     // Sprawdź, czy biblioteka istnieje
     const libraryResult = await client.queryArray(
-        `SELECT libraryid FROM erd_biblioteka_projekt.library_branch WHERE libraryid = $1`,
-        library_id
+        `SELECT libraryid FROM erd_biblioteka_projekt.library_branch WHERE libraryid = ${library_id}`
     );
+
+    console.log("Library Result:", libraryResult.rows);
 
     if (libraryResult.rows.length === 0) {
       context.response.status = 404;
@@ -118,13 +129,20 @@ router.post("/api/assign", async (context) => {
       return;
     }
 
-    // Przypisz książkę do biblioteki
-    const assignResult = await client.queryArray(
-        `INSERT INTO erd_biblioteka_projekt.book_list (library_id, book_id, status) VALUES ($1, $2, $3) RETURNING book_list_id`,
-        library_id,
-        book_id,
-        status
+    // Pobierz najwyższy book_list_id i dodaj 1
+    const maxIdResult = await client.queryArray(
+        `SELECT COALESCE(MAX(book_list_id), 0) + 1 AS next_id FROM erd_biblioteka_projekt.book_list`
     );
+
+    const next_id = maxIdResult.rows[0][0] as number;
+    console.log("Next book_list_id:", next_id);
+
+    // Przypisz książkę do biblioteki z nowym book_list_id
+    const assignResult = await client.queryArray(
+        `INSERT INTO erd_biblioteka_projekt.book_list (book_list_id, library_id, book_id, status) VALUES (${next_id}, ${library_id}, ${book_id}, '${status}') RETURNING book_list_id`
+    );
+
+    console.log("Assign Result:", assignResult.rows);
 
     const book_list_id = assignResult.rows[0][0];
 
@@ -136,7 +154,6 @@ router.post("/api/assign", async (context) => {
     context.response.body = { error: "Internal Server Error" };
   }
 });
-
 
 // main.ts (dodaj poniższy kod przed `app.use(router.routes())`)
 
@@ -156,7 +173,7 @@ router.get("/api/libraries", async (context) => {
   } catch (error) {
     console.error("Error fetching libraries:", error);
     context.response.status = 500;
-    context.response.body = { error: "Internal Server Error" };
+    context.response.body = { error: "Internal Server Error4" };
   }
 });
 
@@ -214,18 +231,7 @@ router.get("/api/books", async (context) => {
     paramIndex++;
   }
 
-  // if (releaseYear) {
-  //   const year = parseInt(releaseYear);
-  //   if (!isNaN(year)) {
-  //     conditions.push(`book_info.book_release_year = $YEAR`);
-  //     params.push(`%${releaseYear}%`);
-  //     paramIndex++;
-  //   } else {
-  //     context.response.status = 400;
-  //     context.response.body = { error: "Invalid release year." };
-  //     return;
-  //   }
-  // }
+
   if (releaseYear) {
     conditions.push(`erd_biblioteka_projekt.book_info.book_release_year::text ILIKE $YEAR`);
     params.push(`%${releaseYear}%`);
@@ -238,8 +244,7 @@ router.get("/api/books", async (context) => {
   }
 
   query += ` GROUP BY erd_biblioteka_projekt.book_info.bookid, erd_biblioteka_projekt.author_info.author_id`;
-  // console.log("Final Query:", query);
-  // console.log("Query Parameters:", params);
+
 
   try {
     console.log(query);

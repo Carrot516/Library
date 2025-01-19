@@ -39,6 +39,16 @@ export default function Sidebar() {
                             Szukanie Książek
                         </NavLink>
                     </li>
+                    <li>
+                        <NavLink to="/AddBook" activeClassName="active">
+                            Dodanie Książki do bazy
+                        </NavLink>
+                    </li>
+                    <li>
+                        <NavLink to="/AssignBook" activeClassName="active">
+                            Dodanie książki do biblioteki
+                        </NavLink>
+                    </li>
                 </ul>
             </nav>
         </div>

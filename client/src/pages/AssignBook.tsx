@@ -1,7 +1,6 @@
 // client/src/pages/AssignBook.tsx
 
 import React, { useState, useEffect } from 'react';
-import './AssignBook.css';
 
 interface AssignData {
     book_id: number;
