@@ -10,9 +10,11 @@ const AddingBooks: React.FC = () => {
     const [email, setEmail] = useState<string>("");
     const [bookName, setBookName] = useState<string>("");
     const [libraryName, setLibraryName] = useState<string>("");
-    const [borrowDate, setBorrowDate] = useState<string>("");  // Zmienna do daty wypożyczenia
-    const [returnEmail, setReturnEmail] = useState<string>(""); // Zmienna do emailu dla zwrotu
-    const [returnDate, setReturnDate] = useState<string>(""); // Zmienna do daty zwrotu
+    const [borrowDate, setBorrowDate] = useState<string>("");
+    const [returnEmail, setReturnEmail] = useState<string>("");
+    const [returnBookName, setReturnBookName] = useState<string>("");
+    const [returnLibraryName, setReturnLibraryName] = useState<string>("");
+    const [returnDate, setReturnDate] = useState<string>("");
 
     const [error, setError] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -23,6 +25,11 @@ const AddingBooks: React.FC = () => {
         setError(null);
         setSuccessMessage(null);
 
+        if (!email || !bookName || !libraryName || !borrowDate) {
+            setError("Wszystkie pola są wymagane.");
+            return;
+        }
+
         try {
             const response = await fetch("/api/borrow", {
                 method: "POST",
@@ -31,7 +38,7 @@ const AddingBooks: React.FC = () => {
                     email,
                     book_name: bookName,
                     library_name: libraryName,
-                    borrow_date: borrowDate, // Wysyłamy datę wypożyczenia
+                    borrow_date: borrowDate,
                 }),
             });
 
@@ -39,6 +46,11 @@ const AddingBooks: React.FC = () => {
 
             if (response.ok) {
                 setSuccessMessage(result.message || "Książka została wypożyczona.");
+                // Resetowanie pól formularza
+                setEmail("");
+                setBookName("");
+                setLibraryName("");
+                setBorrowDate("");
             } else {
                 setError(result.error || "Wystąpił błąd podczas wypożyczania książki.");
             }
@@ -53,15 +65,20 @@ const AddingBooks: React.FC = () => {
         setError(null);
         setSuccessMessage(null);
 
+        if (!returnEmail || !returnBookName || !returnLibraryName || !returnDate) {
+            setError("Wszystkie pola są wymagane.");
+            return;
+        }
+
         try {
             const response = await fetch("/api/return", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    email: returnEmail, // Używamy emailu z formularza zwrotu
-                    book_name: bookName,
-                    library_name: libraryName,
-                    return_date: returnDate, // Wysyłamy datę zwrotu
+                    email: returnEmail,
+                    book_name: returnBookName,
+                    library_name: returnLibraryName,
+                    return_date: returnDate,
                 }),
             });
 
@@ -69,6 +86,11 @@ const AddingBooks: React.FC = () => {
 
             if (response.ok) {
                 setSuccessMessage(result.message || "Książka została zwrócona.");
+                // Resetowanie pól formularza
+                setReturnEmail("");
+                setReturnBookName("");
+                setReturnLibraryName("");
+                setReturnDate("");
             } else {
                 setError(result.error || "Wystąpił błąd podczas zwrotu książki.");
             }
@@ -78,7 +100,7 @@ const AddingBooks: React.FC = () => {
     };
 
     return (
-        <div className="container">
+        <div className="assign-book-container">
             <h2>Wypożyczenie książki</h2>
             <form onSubmit={handleBorrow}>
                 <div>
@@ -112,9 +134,10 @@ const AddingBooks: React.FC = () => {
                     />
                 </div>
                 <div>
-                    <label>Data wypożyczenia:</label>
+                    <label htmlFor="borrowDate">Data wypożyczenia:</label>
                     <input
                         type="date"
+                        id="borrowDate"
                         value={borrowDate}
                         onChange={(e) => setBorrowDate(e.target.value)}
                         required
@@ -140,8 +163,8 @@ const AddingBooks: React.FC = () => {
                     <input
                         type="text"
                         id="returnBookName"
-                        value={bookName}
-                        onChange={(e) => setBookName(e.target.value)}
+                        value={returnBookName}
+                        onChange={(e) => setReturnBookName(e.target.value)}
                         required
                     />
                 </div>
@@ -150,8 +173,8 @@ const AddingBooks: React.FC = () => {
                     <input
                         type="text"
                         id="returnLibraryName"
-                        value={libraryName}
-                        onChange={(e) => setLibraryName(e.target.value)}
+                        value={returnLibraryName}
+                        onChange={(e) => setReturnLibraryName(e.target.value)}
                         required
                     />
                 </div>

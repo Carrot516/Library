@@ -19,16 +19,16 @@ export default function Sidebar() {
                             Rejestracja użytkowników
                         </NavLink>
                     </li>
-                    <li>
-                        <NavLink to="/LibrariesMap" activeClassName="active">
-                            Mapa Bibliotek
-                        </NavLink>
-                    </li>
-                    <li>
-                        <NavLink to="/SearchingAccounts" activeClassName="active">
-                            Szukanie Kont
-                        </NavLink>
-                    </li>
+                    {/*<li>*/}
+                    {/*    <NavLink to="/LibrariesMap" activeClassName="active">*/}
+                    {/*        Mapa Bibliotek*/}
+                    {/*    </NavLink>*/}
+                    {/*</li>*/}
+                    {/*<li>*/}
+                    {/*    <NavLink to="/SearchingAccounts" activeClassName="active">*/}
+                    {/*        Szukanie Kont*/}
+                    {/*    </NavLink>*/}
+                    {/*</li>*/}
                     <li>
                         <NavLink to="/MyAccount" activeClassName="active">
                             Informacje o koncie czytelników

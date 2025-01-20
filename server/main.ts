@@ -3,7 +3,6 @@ import { oakCors } from "https://deno.land/x/cors@v1.2.2/mod.ts";
 import routeStaticFilesFrom from "./util/routeStaticFilesFrom.ts";
 import { connectDB, client } from "./database/db.ts";
 
-
 const app = new Application();
 const router = new Router();
 
@@ -16,6 +15,78 @@ app.use(async (ctx, next) => {
     ctx.response.body = { error: err.message || "Internal Server Error1" };
   }
 });
+
+router.get("/api/myaccount", async (context) => {
+  const email = context.request.url.searchParams.get("email");
+
+  if (!email) {
+    context.response.status = 400;
+    context.response.body = { error: "Brak parametru email." };
+    return;
+  }
+
+  try {
+    // 1. Znajdź account_id na podstawie email
+    const accountResult = await client.queryObject<{ account_id: number }>(
+        `SELECT account_id FROM erd_biblioteka_projekt.account WHERE email = '${email}'`
+
+    );
+
+    if (accountResult.rows.length === 0) {
+      context.response.status = 404;
+      context.response.body = { error: "Nie znaleziono użytkownika o podanym email." };
+      return;
+    }
+
+    const account_id = accountResult.rows[0].account_id;
+
+    // 2. Książki aktualnie wypożyczone (borrowed_date IS NOT NULL i returned_date IS NULL)
+    const borrowedResult = await client.queryObject<{
+      book_name: string;
+      borrowed_date: string;
+      library_name: string;
+      library_id: number;
+    }>(
+        `SELECT bi.book_name, rb.borrowed_date, lb.library_name, lb.library_id
+       FROM erd_biblioteka_projekt.read_books rb
+       JOIN erd_biblioteka_projekt.book_info bi ON bi.bookid = rb.book_id
+       JOIN erd_biblioteka_projekt.library_branch lb ON lb.library_id = rb.library_id
+       WHERE rb.account_id = '${account_id}'
+         AND rb.returned_date IS NULL`
+
+    );
+
+    // 3. Książki już przeczytane/zwrócone (returned_date IS NOT NULL)
+    const readResult = await client.queryObject<{
+      book_name: string;
+      borrowed_date: string;
+      returned_date: string;
+      library_name: string;
+      library_id: number;
+    }>(
+        `SELECT bi.book_name, rb.borrowed_date, rb.returned_date, lb.library_name, lb.library_id
+         FROM erd_biblioteka_projekt.read_books rb
+                JOIN erd_biblioteka_projekt.book_info bi ON bi.bookid = rb.book_id
+                JOIN erd_biblioteka_projekt.library_branch lb ON lb.library_id = rb.library_id
+         WHERE rb.account_id = '${account_id}'
+           AND rb.returned_date IS NOT NULL`,
+
+    );
+
+    context.response.status = 200;
+    context.response.body = {
+      borrowed: borrowedResult.rows,
+      read: readResult.rows,
+    };
+  } catch (error) {
+    console.error("Błąd w /api/myaccount:", error);
+    context.response.status = 500;
+    context.response.body = { error: "Błąd serwera." };
+  }
+});
+
+
+
 
 
 router.post("/api/register", async (ctx) => {
@@ -66,7 +137,6 @@ router.post("/api/register", async (ctx) => {
   }
 });
 
-
 router.post("/api/borrow", async (context) => {
   const { email, book_name, library_name, borrow_date } = await context.request.body().value;
 
@@ -79,14 +149,12 @@ router.post("/api/borrow", async (context) => {
   try {
     // Sprawdzamy, czy książka jest dostępna
     const bookResult = await client.queryObject(
-        `SELECT bl.book_id, bl.status
-       FROM erd_biblioteka_projekt.book_list bl
-       JOIN erd_biblioteka_projekt.library_branch lb ON lb.library_id = bl.library_id
-       JOIN erd_biblioteka_projekt.book_info bi ON bi.bookid = bl.book_id
-       WHERE lb.library_name = '${library_name}' AND bi.book_name = '${book_name}'`
+        `SELECT bl.book_id, bl.status, lb.library_id
+         FROM erd_biblioteka_projekt.book_list bl
+                JOIN erd_biblioteka_projekt.library_branch lb ON lb.library_id = bl.library_id
+                JOIN erd_biblioteka_projekt.book_info bi ON bi.bookid = bl.book_id
+         WHERE lb.library_name = '${library_name}' AND bi.book_name = '${book_name}'`
     );
-    // library_id
-    //libraryid
 
     if (bookResult.rows.length === 0) {
       context.response.status = 404;
@@ -94,7 +162,7 @@ router.post("/api/borrow", async (context) => {
       return;
     }
 
-    const { book_id, status } = bookResult.rows[0];
+    const { book_id, status, library_id } = bookResult.rows[0];
 
     if (status !== "available") {
       context.response.status = 400;
@@ -104,14 +172,14 @@ router.post("/api/borrow", async (context) => {
 
     // Zmiana statusu książki na 'borrowed'
     await client.queryObject(
-        `UPDATE erd_biblioteka_projekt.book_list SET status = 'borrowed' WHERE book_id = '${book_id}' AND library_id = 
-        (SELECT library_id FROM erd_biblioteka_projekt.library_branch WHERE library_name = '${library_name}')`
+        `UPDATE erd_biblioteka_projekt.book_list
+         SET status = 'borrowed'
+         WHERE book_id = '${book_id}' AND library_id = '${library_id}'`
     );
 
     // Zapisanie wypożyczenia do tabeli read_books
     const accountResult = await client.queryObject(
-        `SELECT account_id FROM erd_biblioteka_projekt.account WHERE email = '${email}'`,
-
+        `SELECT account_id FROM erd_biblioteka_projekt.account WHERE email = '${email}'`
     );
 
     if (accountResult.rows.length === 0) {
@@ -123,8 +191,8 @@ router.post("/api/borrow", async (context) => {
     const account_id = accountResult.rows[0].account_id;
 
     await client.queryObject(
-        `INSERT INTO erd_biblioteka_projekt.read_books (account_id, book_id, borrowed_date)
-       VALUES ('${account_id}', '${book_id}', '${borrow_date}')`
+        `INSERT INTO erd_biblioteka_projekt.read_books (account_id, book_id, borrowed_date, library_id)
+         VALUES ('${account_id}', '${book_id}', '${borrow_date}', '${library_id}')`
     );
 
     context.response.status = 201;
@@ -135,8 +203,6 @@ router.post("/api/borrow", async (context) => {
     context.response.body = { error: "Błąd przy wypożyczaniu książki.", details: error.message };
   }
 });
-
-// Endpoint do zwrotu książki
 router.post("/api/return", async (context) => {
   const { email, book_name, library_name, return_date } = await context.request.body().value;
 
@@ -147,9 +213,9 @@ router.post("/api/return", async (context) => {
   }
 
   try {
-    // Sprawdzamy, czy użytkownik ma wypożyczoną książkę
+    // Sprawdzamy, czy książka jest dostępna do zwrotu
     const bookResult = await client.queryObject(
-        `SELECT bl.book_id, bl.status
+        `SELECT bl.book_id, bl.status, lb.library_id
        FROM erd_biblioteka_projekt.book_list bl
        JOIN erd_biblioteka_projekt.library_branch lb ON lb.library_id = bl.library_id
        JOIN erd_biblioteka_projekt.book_info bi ON bi.bookid = bl.book_id
@@ -162,7 +228,7 @@ router.post("/api/return", async (context) => {
       return;
     }
 
-    const { book_id, status } = bookResult.rows[0];
+    const { book_id, status, library_id } = bookResult.rows[0];
 
     if (status !== "borrowed") {
       context.response.status = 400;
@@ -184,7 +250,8 @@ router.post("/api/return", async (context) => {
     const account_id = accountResult.rows[0].account_id;
 
     const readBooksResult = await client.queryObject(
-        `SELECT * FROM erd_biblioteka_projekt.read_books WHERE account_id = '${account_id}' AND book_id = '${book_id}' AND returned_date IS NULL`
+        `SELECT * FROM erd_biblioteka_projekt.read_books 
+       WHERE account_id = '${account_id}' AND book_id = '${book_id}' AND returned_date IS NULL`
     );
 
     if (readBooksResult.rows.length === 0) {
@@ -195,13 +262,17 @@ router.post("/api/return", async (context) => {
 
     // Zmiana statusu książki na 'available'
     await client.queryObject(
-        `UPDATE erd_biblioteka_projekt.book_list SET status = 'available' WHERE book_id = '${book_id}' AND library_id = 
-        (SELECT library_id FROM erd_biblioteka_projekt.library_branch WHERE library_name = '${library_name}')`
+        `UPDATE erd_biblioteka_projekt.book_list 
+       SET status = 'available' 
+       WHERE book_id = '${book_id}' AND library_id = '${library_id}'`
     );
+
 
     // Zaktualizowanie daty zwrotu w tabeli read_books
     await client.queryObject(
-        `UPDATE erd_biblioteka_projekt.read_books SET returned_date = '${return_date}' WHERE account_id = '${account_id}' AND book_id = '${book_id}' AND returned_date IS NULL`
+        `UPDATE erd_biblioteka_projekt.read_books 
+       SET returned_date = '${return_date}' 
+       WHERE account_id = '${account_id}' AND book_id = '${book_id}' AND returned_date IS NULL`
     );
 
     context.response.status = 200;
@@ -209,10 +280,10 @@ router.post("/api/return", async (context) => {
 
   } catch (error) {
     context.response.status = 500;
-    context.response.body = { error: "Błąd przy zwrocie książki." , details: error.message};
-  //   ook_name
+    context.response.body = { error: "Błąd przy zwrocie książki.", details: error.message };
   }
 });
+
 
 
 

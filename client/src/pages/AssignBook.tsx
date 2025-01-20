@@ -1,5 +1,3 @@
-// client/src/pages/AssignBook.tsx
-
 import React, { useState, useEffect } from 'react';
 
 interface AssignData {
@@ -36,15 +34,21 @@ const AssignBook: React.FC = () => {
                 // Pobierz książki
                 const booksResponse = await fetch('/api/books');
                 const booksData = await booksResponse.json();
+
+                // Zamień zwrócone dane na strukturę Book i posortuj alfabetycznie po book_name
                 const transformedBooks: Book[] = booksData.map((item: any[]) => ({
                     bookid: item[0],
                     book_name: item[1],
                 }));
+                transformedBooks.sort((a, b) => a.book_name.localeCompare(b.book_name));
                 setBooks(transformedBooks);
 
                 // Pobierz biblioteki
                 const librariesResponse = await fetch('/api/libraries');
-                const librariesData = await librariesResponse.json();
+                const librariesData: Library[] = await librariesResponse.json();
+
+                // Posortuj biblioteki wg libraryid rosnąco
+                librariesData.sort((a, b) => a.libraryid - b.libraryid);
                 setLibraries(librariesData);
             } catch (err: any) {
                 setError('Failed to fetch books or libraries.');
@@ -99,7 +103,7 @@ const AssignBook: React.FC = () => {
                 <div>
                     <label>Książka:</label>
                     <select name="book_id" value={assignData.book_id} onChange={handleChange} required>
-                        <option value="">Wybierz książkę</option>
+                        <option value={0}>Wybierz książkę</option>
                         {books.map(book => (
                             <option key={book.bookid} value={book.bookid}>
                                 {book.book_name}
@@ -110,13 +114,14 @@ const AssignBook: React.FC = () => {
                 <div>
                     <label>Biblioteka:</label>
                     <select name="library_id" value={assignData.library_id} onChange={handleChange} required>
-                        <option value="">Wybierz bibliotekę</option>
+                        <option value={0}>Wybierz bibliotekę</option>
                         {libraries.map(lib => (
-                            <option key={lib.libraryid} value={lib.libraryid}>
+                            <option key={lib.library_id} value={lib.library_id}>
                                 {lib.library_name}
                             </option>
                         ))}
                     </select>
+
                 </div>
                 <div>
                     <label>Status:</label>
