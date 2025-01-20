@@ -24,7 +24,6 @@ const LoginPage: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<boolean>(false);
 
-    // Obsługa zmian w polach formularza
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setFormData((prev) => ({
@@ -33,13 +32,11 @@ const LoginPage: React.FC = () => {
         }));
     };
 
-    // Obsługa wysłania formularza
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
         setSuccess(false);
 
-        // Prosta walidacja
         if (!formData.name || !formData.email || !formData.password) {
             setError("Wszystkie pola są wymagane.");
             return;

@@ -26,7 +26,6 @@ const AddAuthor: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<boolean>(false);
 
-    // Obsługa zmian w polach formularza
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setFormData((prev) => ({
@@ -35,13 +34,11 @@ const AddAuthor: React.FC = () => {
         }));
     };
 
-    // Obsługa wysłania formularza
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
         setSuccess(false);
 
-        // Sprawdzenie minimalne wymagane przez backend (tu: author_name)
         if (!formData.author_name) {
             setError("author_name jest wymagane.");
             return;

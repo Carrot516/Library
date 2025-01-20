@@ -1,4 +1,3 @@
-// client/src/pages/AddBook.tsx
 
 import React, { useState } from 'react';
 

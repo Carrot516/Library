@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 
-// Typy dla danych
 interface BorrowedBook {
     book_name: string;
     borrowed_date: string;
@@ -45,13 +44,11 @@ const MyAccount: React.FC = () => {
             const data: MyAccountResponse | { error: string } = await response.json();
 
             if (!response.ok) {
-                // Jeśli serwer zwraca błąd
                 const errorObj = data as { error: string };
                 setError(errorObj.error || "Wystąpił błąd podczas pobierania danych.");
                 return;
             }
 
-            // Pomyślne pobranie książek
             const accountData = data as MyAccountResponse;
             setBorrowedBooks(accountData.borrowed);
             setReadBooks(accountData.read);
@@ -86,7 +83,6 @@ const MyAccount: React.FC = () => {
 
             {error && <p style={{ color: "red" }}>{error}</p>}
 
-            {/* Sekcja z aktualnie wypożyczonymi książkami */}
             {borrowedBooks.length > 0 && (
                 <div style={{ marginBottom: "20px" }}>
                     <h3>Aktualnie wypożyczone książki:</h3>
@@ -101,7 +97,6 @@ const MyAccount: React.FC = () => {
                 </div>
             )}
 
-            {/* Sekcja z przeczytanymi (zwróconymi) książkami */}
             {readBooks.length > 0 && (
                 <div>
                     <h3>Książki, które już zwróciłeś:</h3>

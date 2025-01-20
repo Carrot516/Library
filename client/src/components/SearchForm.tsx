@@ -1,7 +1,4 @@
-// client/src/components/SearchForm.tsx
-
 import React, { useState } from 'react';
-// import './SearchForm.css'; // Opcjonalnie, jeśli chcesz dodać stylizację
 
 interface Filters {
     book_name: string;

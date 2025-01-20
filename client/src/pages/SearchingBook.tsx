@@ -1,4 +1,3 @@
-// client/src/pages/SearchingBook.tsx
 
 import React, { useState } from 'react';
 import SearchForm from '../components/SearchForm';
@@ -21,7 +20,6 @@ interface Filters {
 }
 
 const SearchingBook: React.FC = () => {
-    // Stan przechowujący aktualne filtry wyszukiwania
     const [filters, setFilters] = useState<Filters>({
         book_name: '',
         author: '',
@@ -29,20 +27,16 @@ const SearchingBook: React.FC = () => {
         release_year: '',
     });
 
-    // Stan przechowujący wyniki wyszukiwania
     const [books, setBooks] = useState<Book[]>([]);
 
-    // Stan obsługujący ładowanie i błędy
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Stan obsługujący paginację
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
 
-    const limit = 10; // Liczba wyników na stronę
+    const limit = 10;
 
-    // Funkcja obsługująca wyszukiwanie
     const handleSearch = async (newFilters: Filters) => {
         setLoading(true);
         setError(null);
@@ -53,7 +47,6 @@ const SearchingBook: React.FC = () => {
         await fetchBooks(newFilters, 1);
     };
 
-    // Funkcja pobierająca książki z API
     const fetchBooks = async (currentFilters: Filters, pageNumber: number) => {
         const queryParams = new URLSearchParams({
             book_name: currentFilters.book_name,
@@ -74,9 +67,7 @@ const SearchingBook: React.FC = () => {
             const data = await response.json();
             console.log("Received data from API:", data); // Dodany log
 
-            // Sprawdzenie, czy data jest tablicą
             if (Array.isArray(data)) {
-                // Przekształcenie tablic tablic do tablicy obiektów Book
                 const transformedBooks: Book[] = data.map((item: any[]) => ({
                     bookid: item[0],
                     book_name: item[1],
@@ -85,8 +76,8 @@ const SearchingBook: React.FC = () => {
                     author_name: item[4],
                     genres: item[5],
                 }));
-                setBooks(transformedBooks); // Aktualizacja stanu `books` z przekształconymi danymi
-                setTotalPages(1); // Ponieważ backend nie zwraca `totalPages`, ustawiamy domyślną wartość
+                setBooks(transformedBooks);
+                setTotalPages(1);
             } else {
                 console.error("Nieprawidłowa struktura danych:", data);
                 setBooks([]);
@@ -103,7 +94,6 @@ const SearchingBook: React.FC = () => {
         }
     };
 
-    // Funkcja obsługująca zmianę strony w paginacji
     const handlePageChange = (newPage: number) => {
         if (newPage < 1 || newPage > totalPages) return;
         setPage(newPage);
@@ -115,14 +105,10 @@ const SearchingBook: React.FC = () => {
             <h1>Szukanie Książek</h1>
             <p>Tutaj wyszukasz książki i je zarezerwujesz/wypożyczysz.</p>
 
-            {/* Integracja komponentu SearchForm */}
             <SearchForm onSearch={handleSearch} />
 
-            {/* Wyświetlanie komunikatów */}
             {loading && <p>Ładowanie...</p>}
             {error && <p className="error">{error}</p>}
-
-            {/* Wyświetlanie wyników wyszukiwania */}
             <div className="results">
                 {books.length > 0 ? (
                     <ul>
@@ -141,7 +127,6 @@ const SearchingBook: React.FC = () => {
                 )}
             </div>
 
-            {/* Paginacja */}
             {books.length > 0 && (
                 <div className="pagination">
                     <button

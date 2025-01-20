@@ -28,14 +28,10 @@ const AssignBook: React.FC = () => {
     const [success, setSuccess] = useState<boolean>(false);
 
     useEffect(() => {
-        // Fetch books and libraries
         const fetchData = async () => {
             try {
-                // Pobierz książki
                 const booksResponse = await fetch('/api/books');
                 const booksData = await booksResponse.json();
-
-                // Zamień zwrócone dane na strukturę Book i posortuj alfabetycznie po book_name
                 const transformedBooks: Book[] = booksData.map((item: any[]) => ({
                     bookid: item[0],
                     book_name: item[1],
@@ -43,11 +39,9 @@ const AssignBook: React.FC = () => {
                 transformedBooks.sort((a, b) => a.book_name.localeCompare(b.book_name));
                 setBooks(transformedBooks);
 
-                // Pobierz biblioteki
                 const librariesResponse = await fetch('/api/libraries');
                 const librariesData: Library[] = await librariesResponse.json();
 
-                // Posortuj biblioteki wg libraryid rosnąco
                 librariesData.sort((a, b) => a.libraryid - b.libraryid);
                 setLibraries(librariesData);
             } catch (err: any) {

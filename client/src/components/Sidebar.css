@@ -1,15 +1,14 @@
-/* client/src/components/Sidebar.css */
 
 .sidebar {
     width: 200px;
     background-color: #f4f4f4;
-    height: 100vh; /* Pełna wysokość okna przeglądarki */
+    height: 100vh;
     padding: 20px;
     box-sizing: border-box;
-    position: fixed; /* Stałe położenie */
+    position: fixed;
     left: 0;
     top: 0;
-    overflow-y: auto; /* Przewijanie, jeśli zawartość przekracza wysokość */
+    overflow-y: auto;
 }
 
 .sidebar h2 {

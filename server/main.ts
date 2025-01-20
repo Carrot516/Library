@@ -26,7 +26,6 @@ router.get("/api/myaccount", async (context) => {
   }
 
   try {
-    // 1. Znajdź account_id na podstawie email
     const accountResult = await client.queryObject<{ account_id: number }>(
         `SELECT account_id FROM erd_biblioteka_projekt.account WHERE email = '${email}'`
 
@@ -40,7 +39,6 @@ router.get("/api/myaccount", async (context) => {
 
     const account_id = accountResult.rows[0].account_id;
 
-    // 2. Książki aktualnie wypożyczone (borrowed_date IS NOT NULL i returned_date IS NULL)
     const borrowedResult = await client.queryObject<{
       book_name: string;
       borrowed_date: string;
@@ -56,7 +54,6 @@ router.get("/api/myaccount", async (context) => {
 
     );
 
-    // 3. Książki już przeczytane/zwrócone (returned_date IS NOT NULL)
     const readResult = await client.queryObject<{
       book_name: string;
       borrowed_date: string;
@@ -84,9 +81,6 @@ router.get("/api/myaccount", async (context) => {
     context.response.body = { error: "Błąd serwera." };
   }
 });
-
-
-
 
 
 router.post("/api/register", async (ctx) => {
@@ -118,7 +112,6 @@ router.post("/api/register", async (ctx) => {
     );
     const next_user_id = maxIdResult.rows[0][0] as number;
 
-    // Zapisanie nowego użytkownika do bazy danych
     const result = await client.queryArray(
         `INSERT INTO erd_biblioteka_projekt.account (account_id,name, country, city, street, home_number, email, password)
       VALUES ('${next_user_id}','${name}', '${country}', '${city}', '${street}', ${home_number}, '${email}', '${password}') RETURNING account_id`
@@ -147,7 +140,6 @@ router.post("/api/borrow", async (context) => {
   }
 
   try {
-    // Sprawdzamy, czy książka jest dostępna
     const bookResult = await client.queryObject(
         `SELECT bl.book_id, bl.status, lb.library_id
          FROM erd_biblioteka_projekt.book_list bl
@@ -170,14 +162,12 @@ router.post("/api/borrow", async (context) => {
       return;
     }
 
-    // Zmiana statusu książki na 'borrowed'
     await client.queryObject(
         `UPDATE erd_biblioteka_projekt.book_list
          SET status = 'borrowed'
          WHERE book_id = '${book_id}' AND library_id = '${library_id}'`
     );
 
-    // Zapisanie wypożyczenia do tabeli read_books
     const accountResult = await client.queryObject(
         `SELECT account_id FROM erd_biblioteka_projekt.account WHERE email = '${email}'`
     );
@@ -213,7 +203,6 @@ router.post("/api/return", async (context) => {
   }
 
   try {
-    // Sprawdzamy, czy książka jest dostępna do zwrotu
     const bookResult = await client.queryObject(
         `SELECT bl.book_id, bl.status, lb.library_id
        FROM erd_biblioteka_projekt.book_list bl
@@ -236,7 +225,6 @@ router.post("/api/return", async (context) => {
       return;
     }
 
-    // Sprawdzamy, czy użytkownik ma tę książkę wypożyczoną
     const accountResult = await client.queryObject(
         `SELECT account_id FROM erd_biblioteka_projekt.account WHERE email = '${email}'`
     );
@@ -260,7 +248,6 @@ router.post("/api/return", async (context) => {
       return;
     }
 
-    // Zmiana statusu książki na 'available'
     await client.queryObject(
         `UPDATE erd_biblioteka_projekt.book_list 
        SET status = 'available' 
@@ -268,7 +255,6 @@ router.post("/api/return", async (context) => {
     );
 
 
-    // Zaktualizowanie daty zwrotu w tabeli read_books
     await client.queryObject(
         `UPDATE erd_biblioteka_projekt.read_books 
        SET returned_date = '${return_date}' 

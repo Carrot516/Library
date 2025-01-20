@@ -1,4 +1,3 @@
-// client/src/components/Sidebar.tsx
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import './Sidebar.css'; // Stylizacja sidebaru

@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 
-// Typy dla danych
 interface ResponseMessage {
     message?: string;
     error?: string;
@@ -19,7 +18,6 @@ const AddingBooks: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-    // Funkcja obsługująca wypożyczenie książki
     const handleBorrow = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
@@ -59,7 +57,6 @@ const AddingBooks: React.FC = () => {
         }
     };
 
-    // Funkcja obsługująca zwrot książki
     const handleReturn = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
@@ -191,7 +188,6 @@ const AddingBooks: React.FC = () => {
                 <button type="submit">Zwróć książkę</button>
             </form>
 
-            {/* Wyświetlanie komunikatów o błędach lub sukcesach */}
             {error && <div style={{ color: "red" }}>{error}</div>}
             {successMessage && <div style={{ color: "green" }}>{successMessage}</div>}
         </div>
