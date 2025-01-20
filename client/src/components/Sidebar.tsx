@@ -16,7 +16,7 @@ export default function Sidebar() {
                     </li>
                     <li>
                         <NavLink to="/Login" activeClassName="active">
-                            Logowanie
+                            Rejestracja użytkowników
                         </NavLink>
                     </li>
                     <li>
@@ -31,7 +31,7 @@ export default function Sidebar() {
                     </li>
                     <li>
                         <NavLink to="/MyAccount" activeClassName="active">
-                            Moje Konto
+                            Informacje o koncie czytelników
                         </NavLink>
                     </li>
                     <li>
@@ -47,6 +47,16 @@ export default function Sidebar() {
                     <li>
                         <NavLink to="/AssignBook" activeClassName="active">
                             Dodanie książki do biblioteki
+                        </NavLink>
+                    </li>
+                    <li>
+                        <NavLink to="/AddAuthor" activeClassName="active">
+                            Dodawanie informacji o autorze
+                        </NavLink>
+                    </li>
+                    <li>
+                        <NavLink to="/AddingBooks" activeClassName="active">
+                            Wypożyczanie i zwracanie książek
                         </NavLink>
                     </li>
                 </ul>

@@ -8,10 +8,12 @@ import MyAccount from "./pages/MyAccount";
 import SearchingAccounts from "./pages/SearchingAccounts";
 import SearchingBook from "./pages/SearchingBook";
 import Sidebar from "./components/Sidebar";
-import AddBook from "./pages/AddBook"
-import AssignBook from "./pages/AssignBook"
+import AddBook from "./pages/AddBook";
+import AssignBook from "./pages/AssignBook";
+import AddingBooks from "./pages/AddingBooks";
 
 import "./App.css";
+import AddAuthor from "./pages/AddAuthor";
 
 function App() {
     return (
@@ -28,6 +30,8 @@ function App() {
                         <Route path="/SearchingBook" element={<SearchingBook/>}/>
                         <Route path="/AddBook" element={<AddBook/>}/>
                         <Route path="/AssignBook" element={<AssignBook/>}/>
+                        <Route path="/AddAuthor" element={<AddAuthor/>}/>
+                        <Route path="/AddingBooks" element={<AddingBooks/>}/>
                     </Routes>
                 </div>
             </div>

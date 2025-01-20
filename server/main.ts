@@ -3,6 +3,7 @@ import { oakCors } from "https://deno.land/x/cors@v1.2.2/mod.ts";
 import routeStaticFilesFrom from "./util/routeStaticFilesFrom.ts";
 import { connectDB, client } from "./database/db.ts";
 
+
 const app = new Application();
 const router = new Router();
 
@@ -13,6 +14,275 @@ app.use(async (ctx, next) => {
     console.error("Globalny błąd:", err);
     ctx.response.status = err.status || 500;
     ctx.response.body = { error: err.message || "Internal Server Error1" };
+  }
+});
+
+
+router.post("/api/register", async (ctx) => {
+  const body = ctx.request.body({ type: "json" });
+  const data = await body.value;
+
+
+
+  const {
+    name,
+    country,
+    city,
+    street,
+    home_number,
+    email,
+    password,
+  } = data;
+
+  if (!name || !email || !password) {
+    ctx.response.status = 400;
+    ctx.response.body = { error: "Wszystkie pola są wymagane." };
+    return;
+  }
+
+  try {
+
+    const maxIdResult = await client.queryArray(
+        `SELECT COALESCE(MAX(account_id), 0) + 1 AS next_id FROM erd_biblioteka_projekt.account`
+    );
+    const next_user_id = maxIdResult.rows[0][0] as number;
+
+    // Zapisanie nowego użytkownika do bazy danych
+    const result = await client.queryArray(
+        `INSERT INTO erd_biblioteka_projekt.account (account_id,name, country, city, street, home_number, email, password)
+      VALUES ('${next_user_id}','${name}', '${country}', '${city}', '${street}', ${home_number}, '${email}', '${password}') RETURNING account_id`
+    );
+
+    const accountId = result.rows[0][0];
+
+    ctx.response.status = 201;
+    ctx.response.body = {
+      message: "Użytkownik zarejestrowany pomyślnie.",
+      account_id: accountId,
+    };
+  } catch (error) {
+    ctx.response.status = 500;
+    ctx.response.body = { error: "Błąd przy rejestracji użytkownika.", details: error.message };
+  }
+});
+
+
+router.post("/api/borrow", async (context) => {
+  const { email, book_name, library_name, borrow_date } = await context.request.body().value;
+
+  if (!email || !book_name || !library_name || !borrow_date) {
+    context.response.status = 400;
+    context.response.body = { error: "Wszystkie pola są wymagane." };
+    return;
+  }
+
+  try {
+    // Sprawdzamy, czy książka jest dostępna
+    const bookResult = await client.queryObject(
+        `SELECT bl.book_id, bl.status
+       FROM erd_biblioteka_projekt.book_list bl
+       JOIN erd_biblioteka_projekt.library_branch lb ON lb.library_id = bl.library_id
+       JOIN erd_biblioteka_projekt.book_info bi ON bi.bookid = bl.book_id
+       WHERE lb.library_name = '${library_name}' AND bi.book_name = '${book_name}'`
+    );
+    // library_id
+    //libraryid
+
+    if (bookResult.rows.length === 0) {
+      context.response.status = 404;
+      context.response.body = { error: "Książka nie istnieje w podanej bibliotece." };
+      return;
+    }
+
+    const { book_id, status } = bookResult.rows[0];
+
+    if (status !== "available") {
+      context.response.status = 400;
+      context.response.body = { error: "Książka nie jest dostępna do wypożyczenia." };
+      return;
+    }
+
+    // Zmiana statusu książki na 'borrowed'
+    await client.queryObject(
+        `UPDATE erd_biblioteka_projekt.book_list SET status = 'borrowed' WHERE book_id = '${book_id}' AND library_id = 
+        (SELECT library_id FROM erd_biblioteka_projekt.library_branch WHERE library_name = '${library_name}')`
+    );
+
+    // Zapisanie wypożyczenia do tabeli read_books
+    const accountResult = await client.queryObject(
+        `SELECT account_id FROM erd_biblioteka_projekt.account WHERE email = '${email}'`,
+
+    );
+
+    if (accountResult.rows.length === 0) {
+      context.response.status = 404;
+      context.response.body = { error: "Nie znaleziono użytkownika o tym adresie email." };
+      return;
+    }
+
+    const account_id = accountResult.rows[0].account_id;
+
+    await client.queryObject(
+        `INSERT INTO erd_biblioteka_projekt.read_books (account_id, book_id, borrowed_date)
+       VALUES ('${account_id}', '${book_id}', '${borrow_date}')`
+    );
+
+    context.response.status = 201;
+    context.response.body = { message: "Książka została wypożyczona." };
+
+  } catch (error) {
+    context.response.status = 500;
+    context.response.body = { error: "Błąd przy wypożyczaniu książki.", details: error.message };
+  }
+});
+
+// Endpoint do zwrotu książki
+router.post("/api/return", async (context) => {
+  const { email, book_name, library_name, return_date } = await context.request.body().value;
+
+  if (!email || !book_name || !library_name || !return_date) {
+    context.response.status = 400;
+    context.response.body = { error: "Wszystkie pola są wymagane." };
+    return;
+  }
+
+  try {
+    // Sprawdzamy, czy użytkownik ma wypożyczoną książkę
+    const bookResult = await client.queryObject(
+        `SELECT bl.book_id, bl.status
+       FROM erd_biblioteka_projekt.book_list bl
+       JOIN erd_biblioteka_projekt.library_branch lb ON lb.library_id = bl.library_id
+       JOIN erd_biblioteka_projekt.book_info bi ON bi.bookid = bl.book_id
+       WHERE lb.library_name = '${library_name}' AND bi.book_name = '${book_name}'`
+    );
+
+    if (bookResult.rows.length === 0) {
+      context.response.status = 404;
+      context.response.body = { error: "Książka nie istnieje w podanej bibliotece." };
+      return;
+    }
+
+    const { book_id, status } = bookResult.rows[0];
+
+    if (status !== "borrowed") {
+      context.response.status = 400;
+      context.response.body = { error: "Książka nie jest wypożyczona, więc nie można jej zwrócić." };
+      return;
+    }
+
+    // Sprawdzamy, czy użytkownik ma tę książkę wypożyczoną
+    const accountResult = await client.queryObject(
+        `SELECT account_id FROM erd_biblioteka_projekt.account WHERE email = '${email}'`
+    );
+
+    if (accountResult.rows.length === 0) {
+      context.response.status = 404;
+      context.response.body = { error: "Nie znaleziono użytkownika o tym adresie email." };
+      return;
+    }
+
+    const account_id = accountResult.rows[0].account_id;
+
+    const readBooksResult = await client.queryObject(
+        `SELECT * FROM erd_biblioteka_projekt.read_books WHERE account_id = '${account_id}' AND book_id = '${book_id}' AND returned_date IS NULL`
+    );
+
+    if (readBooksResult.rows.length === 0) {
+      context.response.status = 400;
+      context.response.body = { error: "Użytkownik nie ma tej książki wypożyczonej." };
+      return;
+    }
+
+    // Zmiana statusu książki na 'available'
+    await client.queryObject(
+        `UPDATE erd_biblioteka_projekt.book_list SET status = 'available' WHERE book_id = '${book_id}' AND library_id = 
+        (SELECT library_id FROM erd_biblioteka_projekt.library_branch WHERE library_name = '${library_name}')`
+    );
+
+    // Zaktualizowanie daty zwrotu w tabeli read_books
+    await client.queryObject(
+        `UPDATE erd_biblioteka_projekt.read_books SET returned_date = '${return_date}' WHERE account_id = '${account_id}' AND book_id = '${book_id}' AND returned_date IS NULL`
+    );
+
+    context.response.status = 200;
+    context.response.body = { message: "Książka została zwrócona." };
+
+  } catch (error) {
+    context.response.status = 500;
+    context.response.body = { error: "Błąd przy zwrocie książki." , details: error.message};
+  //   ook_name
+  }
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+router.post("/api/authors", async (ctx) => {
+  const body = ctx.request.body({ type: "json" });
+  const data = await body.value;
+
+  // Rozpakowanie danych z obiektu `data`
+  const {
+    author_name,
+    author_birth,
+    author_death,
+    author_primary_lang,
+    author_nationality,
+    author_field_of_activity,
+    author_occupation,
+    author_gender,
+  } = data;
+
+  // Przykład walidacji minimalnej
+  if (!author_name) {
+    ctx.response.status = 400;
+    ctx.response.body = { error: "Missing required field: author_name." };
+    return;
+  }
+
+  try {
+    // Wylicz ID autora
+    const maxIdResult = await client.queryArray(
+        `SELECT COALESCE(MAX(author_id), 0) + 1 AS next_id FROM erd_biblioteka_projekt.author_info`
+    );
+    const next_author_id = maxIdResult.rows[0][0] as number;
+
+    // Wstawiamy dane autora do tabeli author_info
+    const result = await client.queryArray(
+        `INSERT INTO erd_biblioteka_projekt.author_info (
+        author_id,
+        author_name,
+        author_birth,
+        author_death,
+        author_primary_lang,
+        author_nationality,
+        author_field_of_activity,
+        author_occupation,
+        author_gender
+      ) VALUES ('${next_author_id}', '${author_name}', '${author_birth}', '${author_death}', '${author_primary_lang}', '${author_nationality}', '${author_field_of_activity}', '${author_occupation}', '${author_gender}') RETURNING author_id`
+    );
+
+    const insertedAuthorId = result.rows[0][0];
+    ctx.response.status = 201;
+    ctx.response.body = {
+      message: "Author added successfully.",
+      author_id: insertedAuthorId,
+    };
+  } catch (error) {
+    console.error("Error adding author:", error);
+    ctx.response.status = 500;
+    ctx.response.body = { error: "Internal Server Error" };
   }
 });
 
@@ -118,7 +388,7 @@ router.post("/api/assign", async (context) => {
 
     // Sprawdź, czy biblioteka istnieje
     const libraryResult = await client.queryArray(
-        `SELECT libraryid FROM erd_biblioteka_projekt.library_branch WHERE libraryid = ${library_id}`
+        `SELECT library_id FROM erd_biblioteka_projekt.library_branch WHERE library_id = ${library_id}`
     );
 
     console.log("Library Result:", libraryResult.rows);
@@ -160,11 +430,11 @@ router.post("/api/assign", async (context) => {
 router.get("/api/libraries", async (context) => {
   try {
     const result = await client.queryArray(`
-      SELECT libraryid, library_name FROM erd_biblioteka_projekt.library_branch
+      SELECT library_id, library_name FROM erd_biblioteka_projekt.library_branch
     `);
 
     const libraries = result.rows.map(row => ({
-      libraryid: row[0],
+      library_id: row[0],
       library_name: row[1],
     }));
 
